@@ -1,0 +1,767 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Document</title>
+</head>
+<body>
+    1. Set & Map
+    <script>
+        //map 是一组键值对，用于查找 var m = new Map();
+        var m = new Map([['Michael', 95], ['Bob', 75], ['Tracy', 85]]);
+        m.get('Michael'); // 95
+        m.set('lucy',100);
+        //set 是一组key的集合，没有value，特点：key不能重复！
+        var s = new Set([1,2,3,3]);
+        s // set{1,2,3}
+        // Map和Set是ES6标准新增的数据类型
+    </script>
+    <hr>
+    2. for in & for of 区别
+    <script>
+       // for...in循环出的是key, for...of循环出的是value
+       // for...in是ES5标准    , for...of是ES6标准;
+       // for...of只能遍历array,不过可以搭配 Object.keys()/Object.values() 去遍历对象
+    </script>
+
+    <hr>
+    3. arguments 类数组对象
+    <script>
+        //类似于Array , 但只有Array的 length属性和索引元素 两个属性
+        //callee属性，返回正被执行的 Function 对象
+        var sum = function (n) {
+            console.log(arguments)//arguments类数组对象
+            //将 类数组对象 转化成 数组对象
+            console.log(...arguments) //6    ‘ ... ’为展开语法
+            console.log([...arguments]) //[6]
+            if (1 == n) {
+                return 1;
+            } else {
+                return n + arguments.callee(n - 1);
+            }
+        }
+        console.log(sum(6));//6+5+4+3+2+1
+    </script>
+    <hr>
+    4. eventLoop 的细节  宏任务 & 微任务
+    <script>
+        //Event loop：即事件循环，是JavaScript引擎 处理异步任务 的方式  
+        //js和node都是单线程
+
+        //浏览器的eventLoop 不同于 node的eventLoop
+        //node新增了微任务的process.nextTick以及宏任务的setImmediate。
+
+        //浏览器的eventLoop
+        //在事件循环中，用户代理会不断从task队列中按顺序取task执行，每执行完一个task都会检查microtask队列是否为空（执行完一个task的具体标志是函数执行栈为空），如果不为空则会一次性执行完所有microtask。然后再进入下一个循环去task队列中取下一个task执行...
+        //一个事件循环里有很多个任务队列（task queues）来自不同任务源，每一个任务队列里的任务是严格按照先进先出的顺序执行的，但是不同任务队列的任务的执行顺序是不确定的。
+
+        //异步任务分为：
+        //宏任务 ：scrit整体代码 I/O setTimeout setInterval setImmediate(node独有) requestAnimationFrame
+        //微任务 ：process.nextTick(node独有) MutationObserver Promise.then catch finally
+
+        //==例1==
+        setTimeout(_ => console.log(4))//setTimeout的回调函数会在下一个事件循环中执行
+        new Promise(resolve => {
+            resolve()
+            console.log(1)
+        }).then(_ => {
+            console.log(3)
+        })
+        console.log(2)
+        //以上代码输出顺序 1234 因为微任务一定会先于宏任务
+
+        //==例2==
+        setImmediate(() => {
+            console.log('setImmediate1')  
+            setTimeout(() => {
+                console.log('setTimeout1')
+            }, 0);
+        })
+        setTimeout(()=>{
+            console.log('setTimeout2')
+            process.nextTick(()=>console.log('nextTick'))
+            setImmediate(()=>{
+                console.log('setImmediate2')
+            })
+        },0);
+        //以上代码输出顺序有两种：因为node中setTimeout与setImmediate执行顺序不固定
+        //setTimeout2 nextTick setImmediate1 setImmediate2 setTimeout1 (setTimeout比setImmediate快)
+        //setImmediate1 setTimeout2 nextTick setImmediate2 setTimeout1 (setImmediate比setTimeout快)
+
+        //==例3==
+        //微任务中的两个比较：nextTick 比 Promise.then 快
+        Promise.resolve('123').then(res=>{
+           console.log(res);
+        })
+        process.nextTick(() => console.log('nextTick'))
+        //以上代码输出顺序：nextTick 123
+
+    </script>
+   
+    <hr>
+    5. new bind call apply 的实现
+    <script>
+        //new 创建一个对象实例
+        function Fruits() {
+            this.color = "red"
+            this.say=function(){
+                console.log("My color is " + this.color);
+            }
+        }
+        var apple = new Fruits();
+        apple.say();    //My color is red
+        function Banana(){
+            this.color="yellow"
+        }
+        var banana = new Banana();
+        apple.say.call(banana);//My color is yellow
+        var f1=apple.say.bind(banana); 
+        f1() //My color is yellow
+
+
+        //bind call apply 是用来改变函数执行时this指向的
+        var a = {
+            user:"哈哈哈",
+            f2:function(x,y){
+                console.log(this.user)
+                console.log(x,y)
+            }
+        }
+        var c=a.f2,
+            d=a.f2,
+            e=a.f2;
+        c.call(a,1,2)    //call  : this指向a。立即执行。可添加多个参数，参数顺序写
+        d.apply(a,[1,2]) //apply : this指向a。立即执行。可添加多个参数，参数为数组形式  // call  apply 如果第一个参数为null，则为this指向window
+        e.bind(a,1,2)    //bind  : this指向a。不立即执行。可添加多个参数，参数顺序写  // e() 时才会执行
+    
+    </script>
+    <hr>
+    6. js 作用域
+    <script>
+        //es5有 全局作用域 和 函数作用域 两种  es6有块级作用域用let声明
+        //闭包：内部函数在其外部函数 以外被调用，但仍然保持访问其外部函数的变量和参数
+        //作用域是在定义的时候决定的，和什么时候执行无关
+
+    </script>
+    <hr>
+
+    7. 作用域和执行上下文
+    <script>
+        //作用域在函数定义时就确定了，执行上下文是在调用时确定(this)
+    </script>
+    <hr>
+
+    8. with
+    <script>
+        //with 临时拓展作用域链,不建议使用，会泄露变量
+        function foo(obj) {
+            with (obj) {
+                a = 2;
+            }
+        }
+
+        var o1 = {
+            a: 3
+        };
+
+        var o2 = {
+            b: 3
+        }
+
+        foo(o1);
+        console.log(o1.a);  //2
+
+        foo(o2);
+        console.log(o2.a);  //underfined
+        console.log(a);     //不好，a被泄漏到全局作用域上了
+
+        //如果代码大量使用 with 或者 eval()，那么运行起来会变得非常慢。
+    </script>
+    <hr>
+
+    9. eval
+    <script>
+        function foo(str){
+            'use strict';//严格模式
+            eval(str);
+            console.log(a);//严格模式下，输出ReferenceError: a is not defined
+            console.log(a);//如果不是严格模式下，则输出 2
+        }
+        foo('var a =2');
+    </script>
+    <hr>
+
+    10. prototype 和 **proto** 的区别
+    <script>
+        function Person(){
+
+        }
+        var person1 = new Person();
+        console.log(person1.__proto__ == Person.prototype)
+        //实例的__proto__ 指向 构造函数的prototype
+    </script> 
+    <hr>
+    
+    
+    
+    
+    <hr>
+    #### JS 应用
+    
+    <hr>
+    
+    
+    <hr>
+    1. 10000000/10000000.00 加千分符
+    <script>
+        var num = 10000000000;
+        num.toString().replace(/(\d{1,3})(?=(\d{3})+$)/g,'$1,');
+        
+        var num = 100000000.00;
+        num.toFixed(2).replace(/(\d{1,3})(?=(\d{3})+.\d{2}$)/g,'$1,');
+    </script>
+    
+    <hr>
+    2. 节流 & 防抖
+    <script>
+        let flag = 0; // 记录当前函数调用次数
+        // 当用户滚动时被调用的函数
+        function foo() {
+            flag++;
+            console.log('Number of calls: %d', flag);
+        }
+
+        //1.防抖 当持续触发事件时，一定时间段内没有再触发事件，事件处理函数才会执行一次，如果设定的时间到来之前，又一次触发了事件，就重新开始延时。如下图，持续触发scroll事件时，并不执行handle函数，当1000毫秒内没有触发scroll事件时，才会延时触发scroll事件。
+        function debounce(fn, delay) {
+            let timer;
+            let context, args;
+            let run = () => {
+                clearTimeout(timer);timer=null;
+                timer = setTimeout(function() {
+                    fn.apply(context, args);
+                }, delay);
+            }
+            return function() {
+                context = this;
+                args = arguments;
+                run();
+            }
+        }
+        //document.body.addEventListener('mousewheel', debounce(foo, 1000));
+
+        //2.节流  定时器期间，只执行最后一次操作
+        var throttling = (fn, wait) => {
+            let timer;
+            let context, args;
+            let run = () => {
+                timer=setTimeout(()=>{
+                    fn.apply(context,args);
+                    clearTimeout(timer);
+                    timer=null;
+                },wait);
+            }
+            return function () {
+                let context=this;
+                let args=arguments;
+                if(!timer){
+                    console.log("throttle, set");
+                    run();
+                }else{
+                    console.log("throttle, ignore");
+                }
+            }
+        }
+        //document.body.addEventListener('mousewheel', throttling(foo, 1000));
+
+        // 结论：如果需要事件高频发生，throttle 比 debounce 更好
+
+    </script>
+    
+    <hr>
+    3. Promise 的手写实现 & 在这之前如何处理回调地狱
+    <script>
+        //处理回调地狱
+        //1.嵌套要少，尽量拆解成单个的块
+
+        //promise
+        new Promise((resolve,reject)=>{
+            // resolve(1);
+            reject(1);
+        }).then(function (result) {
+            console.log('成功：' + result);
+        }).catch(function (reason) {
+            console.log('失败：' + reason);
+        });
+    </script>
+    <hr>
+    4. 原型链 & 继承 的分析题
+    <script>
+        //原型对象：函数的prototype属性指向的对象
+        
+        //1.
+        var F=function(){};
+        Object.prototype.a=function(){
+            console.log('a()')
+        };
+        Function.prototype.b=function(){
+            console.log('b()')
+        }
+        var f=new F();
+        f.a()//a()
+        f.b()//报错找不到b这个函数
+        F.a()//a()
+        F.b()//b()
+        
+        //2.
+            function Parent() {
+                this.a = 1;
+                this.b = [1, 2, this.a];
+                this.c = { demo: 5 };
+                this.show = function () {
+                    console.log(this.a, this.b, this.c.demo);
+                }
+            }
+            function Child() {
+                this.a = 2;
+                this.change = function () {
+                    this.b.push(this.a);
+                    this.a = this.b.length;
+                    this.c.demo = this.a++;
+                }
+            }
+            Child.prototype = new Parent();
+            var parent = new Parent();
+            var child1 = new Child();
+            var child2 = new Child();
+            child1.a = 11;
+            child2.a = 12;
+            parent.show();//1 [1, 2, 1] 5
+            child1.show();//6 11 [1, 2, 1] 5
+            child2.show();//6 12 [1, 2, 1] 5
+            child1.change();
+            child2.change();
+            parent.show();//6 1 [1, 2, 1] 5
+            child1.show();//6 5 [1, 2, 1, 11, 12] 5
+            child2.show();//6 6 [1, 2, 1, 11, 12] 5
+
+            //child1 和 child2 的 __proto__ 指向同一个地方 所以两次change后 this.b 变为5个值
+           
+    </script>
+    
+    <hr>
+    5. this 指向问题 的分析题
+    <script>
+        //1.
+        var length = 10;
+        function fn() {
+            console.log(this.length);
+        }
+        var obj = {
+            length: 5,
+            method: function() {
+                fn();//fn() ==> window.fn() 所以this指向的window
+                fn.call(this);//调用fn的this为obj
+            }
+        };
+        obj.method();
+
+        //2.
+        var x = 3;
+        var y = 4;
+        var obj = {
+            x: 1,
+            y: 6,
+            getX: function() {
+                var x =5;
+                return function() {
+                    return this.x; //this指向window
+                }();
+            },
+            getY: function() {
+                var y =7;
+                return this.y;
+            }
+        }
+        console.log(obj.getX())//3 
+        console.log(obj.getY())//6
+    </script>
+    
+    <hr>
+    6. 排序 & 去重
+    <script>
+        //冒泡排序
+        function bubbleSort(arr){
+            for(var i=0;i<arr.length-1;i++){
+                for(var j=0;j<arr.length-i-1;j++){
+                    if(arr[j]>arr[j+1]){
+                        var temp=arr[j];
+                        arr[j]=arr[j+1];
+                        arr[j+1]=temp;
+                    }
+                }
+            }
+            return arr;
+        }
+        console.log(bubbleSort([6,1,2,4,3,5]))
+        //选择排序
+        function selectSort(arr){
+            var min,temp;
+            for(var i=0;i<arr.length-1;i++){
+                min=i;
+                for(var j=i+1;j<arr.length;j++){
+                    if(arr[j]<arr[min]){
+                        min = j;
+                    }
+                }
+                temp=arr[i];
+                arr[i]=arr[min];
+                arr[min]=temp;
+
+            }
+            return arr;
+        }
+        console.log(selectSort([6,1,2,4,3,5])) 
+        //快速排序
+        function quickSort(arr){
+            if(arr.length<2){return arr}
+
+            var left=[],right=[],mid=arr.splice(Math.floor(arr.length/2),1);
+
+            for(var i=0;i<arr.length;i++){
+                    if(arr[i]<mid){
+                        left.push(arr[i]);
+                    }else {
+                        right.push(arr[i])
+                    }
+            }
+            return quickSort(left).concat(mid,quickSort(right))
+        }
+        console.log(quickSort([6,1,2,4,3,5]))
+        //插入排序
+        function insertSort(arr) {
+            var len = arr.length;
+            for (var i = 1; i < len; i++) {
+                var j = i - 1;
+                var key = arr[i];
+                while (j >= 0 && arr[j] > key) {
+                    arr[j + 1] = arr[j];
+                    j--;
+                }
+                arr[j + 1] = key;
+            }
+            return arr;
+        }
+        console.log(insertSort([6,1,2,4,3,5]))
+        //arr.sort
+        var arr = [30,10,111,35,1899,50,45];
+        arr.sort()//sort不加参数，按unicode排序：[10, 111, 1899, 30, 35, 45, 50]
+        arr.sort((a,b)=>{return a-b}) //升序：[10, 30, 35, 45, 50, 111, 1899]
+        arr.sort((a,b)=>{return b-a}) //降序
+
+        var arr5 = [{id:10},{id:5},{id:6},{id:9},{id:2},{id:3}];
+        arr5.sort((a,b)=>{return a.id-b.id})//[{id:2},{id:3},{id:5},{id:6},{id:9},{id:10}]
+
+        //去重 filter
+        var arr = [1,2,2,6,7,7,8,8];
+        var newArr = arr.filter(function(element,index,self){
+            return self.indexOf(element) === index;
+        });
+        console.log(newArr);
+    </script>
+    
+    <hr>
+    7. 深拷贝
+    <script>
+        //七大数据类型
+        //基本类型：Number、String、Boolean、Null、 Undefined、Symbol(ES6)
+        //引用类型：Object ( 在JS中除了基本数据类型以外的都是对象，数组是对象，函数是对象，正则表达式是对象 )
+        //基本数据类型的赋值，就是「传值」；而引用类型变量赋值，实际上是「传址」。
+        
+        //浅拷贝：浅拷贝只会将对象的各个属性进行依次复制，并不会进行递归复制，也就是说只会进行赋值目标对象的第一层属性。
+        //       对于目标对象第一层为基本数据类型的数据，就是直接赋值，即「传值」；
+        //       对于目标对象第一层为引用数据类型的数据，就是直接赋存于栈内存中的堆内存地址，即「传址」。
+
+        var a=[1,2,3];
+        var b=a;
+        console.log(b)//[1,2,3]
+        a[2]=4;
+        console.log(b[2])//4
+        a=[3,2,1]
+        console.log(b)//[1,2,4]
+        
+        var obj1={name:'liuxin'}
+        var obj2=obj1;
+        obj2.age=24;
+        console.log(obj1.age)//24
+
+        //浅拷贝问题:数组和对象 这种引用类型 在复制之后 二者引用的是同一个地址，二者相互关联。如果不希望其关联，则需使用深拷贝。
+        
+        //深拷贝：采用递归
+        var a={key1:"11111"}
+        function Copy(p,c){
+            var c =c||{};
+            for (var i in p){
+                if(typeof p[i]==="object"){
+                    c[i]=(p[i].constructor ===Array)?[]:{}
+                    Copy(p[i],c[i]);
+                }else{
+                    c[i]=p[i]
+                }
+            }    
+            return c;
+        }
+        a.key2 = ["liuxin","lx"]
+        var b = {}
+        b = Copy(a,b); 
+        b.key2.push("lucy");
+        b.key2//["liuxin","lx","lucy"]
+        a.key2//["liuxin","lx"]
+
+    </script>
+    
+    <hr>
+    8. sleep 的实现
+    <script>
+        function sleep(delay) {
+            var start = (new Date()).getTime();
+            while ((new Date()).getTime() - start < delay) {
+                continue;
+            }
+        }
+        console.log('111');
+        sleep(2000);
+        console.log('222');//输出111后 2秒后 输出222
+    </script>
+    <hr>
+    9. arr.reduce 的实际应用
+    <script>
+        var arr=[1,2,3,4,5,6,7,8];
+        //arr.forEach 
+        array1.forEach(function(element,index,array) {
+            console.log(element);
+        });
+
+        //arr.map 数组单个元素各自做运算
+        var arr1 = arr.map(function(element,index,array){
+            return element*element;//求平方
+        });
+        console.log(arr1);// [1, 4, 9, 16, 25, 36, 49, 64]
+
+        //arr.reduce 数组所有元素做累积运算
+        //arr.reduce(callback[,initialValue]) initialValue为从计算的初始值，默认不设置为0 即从0开始累计
+        var arr2 = arr.reduce(function(accumulator,currentValue,currentIndex,array){
+            return accumulator+currentValue
+        })//1+2+3+4+5+6+7+8=36
+        var arr2 = arr.reduce(function(accumulator,currentValue){
+            return accumulator+currentValue
+        },6)// 6 + 1+2+3+4+5+6+7+8=42
+        var arr2 = arr.reduce(function(x,y){
+            return Math.max(x,y);
+        })//8
+        
+
+    </script>
+    
+    <hr>
+    10. 递归的实现和应用
+    <script>
+        //例1 根据某节点判断其所有后代元素中符合条件的  getElementsByClassName
+        //例2 深拷贝
+    </script>
+    
+    <hr>
+    #### CSS
+    
+    <hr>
+    1. flex & flex 兼容性问题
+    <style>
+        .flex{
+            flex-direction: column;
+            flex-wrap: nowrap;
+            align-items: center;
+            justify-content: space-around;
+            align-content: center;/*多轴线对齐*/
+            flex-shrink: 0;/*空间不足时，不缩小，默认是1缩小*/
+            /* flex: <'flex-grow'> <'flex-shrink'>? || <'flex-basis'> ;/*auto (1 1 auto) 和 none (0 0 auto)*/
+
+        }
+        .flex{
+            display: -webkit-box; /* Chrome 4+, Safari 3.1, iOS Safari 3.2+ */  
+            display: -moz-box; /* Firefox 17- */  
+            display: -webkit-flex; /* Chrome 21+, Safari 6.1+, iOS Safari 7+, Opera 15/16 */  
+            display: -moz-flex; /* Firefox 18+ */  
+            display: -ms-flexbox; /* IE 10 */  
+            display: flex; /* Chrome 29+, Firefox 22+, IE 11+, Opera 12.1/17/18, Android 4.4+ */
+        }
+
+    </style>
+    <hr>
+    
+    #### 前端概念
+    
+    <hr>
+    1. AMD & CMD & CommonJS 的区别
+    
+    <hr>
+    2. async & await
+    
+    <hr>
+    3. http 1.0 & http 1.1 & http 2.0 区别
+    
+    <hr>
+    4. 抓包
+    
+    <hr>
+    5. 缓存机制
+    
+    <hr>
+    6. CDN
+    
+    
+    <hr>
+    8. 跨域
+    
+    <hr>
+    9. 埋点
+    
+    <hr>
+    10. 错误监控
+    
+    <hr>
+    11. 浏览器一个域名的并发限制
+    
+    <hr>
+    12. css、js 的加载阻塞后续的执行，但不阻塞加载（htmlPreLoaderScanner）
+    
+    <hr>
+    13. 懒加载、预加载
+    
+    <hr>
+    14. PWA
+    
+    <hr>
+    15. 复杂度（n²）
+    
+    <hr>
+    16. 页面性能优化
+    
+    <hr>
+    17. 解决首页白屏时间
+    
+    <hr>
+    18. 正则匹配
+    
+    <hr>
+    
+    
+    <hr>
+    #### 浏览器知识
+    
+    <hr>
+    
+    
+    <hr>
+    1. js 引入方式：直接、deffer、async、动态
+    
+    <hr>
+    2. 对同一域名资源并发加载上限（chrome-6、ff-6，ie8-10）
+    
+    <hr>
+    3. xmlHttpRequest 对象二代（onProgress）
+    
+    <hr>
+    4. UI 线程 & JS 线程（互斥）
+    
+    <hr>
+    5. 重绘 & 回流
+    
+    <hr>
+    6. pushState & replaceState | onpopstate
+    
+    <hr>
+    
+    
+    <hr>
+    #### 框架
+    
+    <hr>
+    
+    
+    <hr>
+    1. Vue 生命周期
+    
+    <hr>
+    2. 双向数据绑定原理
+    
+    <hr>
+    3. 虚 DOM 原理
+    
+    <hr>
+    4. Vue 的 SEO 如何做
+    
+    <hr>
+    5. Vue React Angular 的异同
+    
+    <hr>
+    6. MVVM 框架的优势
+    
+    <hr>
+    7. 组件库单组件引用实现
+    
+    <hr>
+    
+    
+    <hr>
+    #### Webpack
+    
+    <hr>
+    
+    
+    <hr>
+    1. webpack 的原理
+    
+    <hr>
+    2. babel 的实现、原理、细节
+    
+    <hr>
+    3. style-loader 实现、原理、细节
+    
+    <hr>
+    4. webpack 新特性
+    
+    <hr>
+    
+    
+    <hr>
+    #### Node
+    
+    <hr>
+    
+    
+    <hr>
+    1. Node & Broswer 事件循环差异
+    
+    <hr>
+    
+    
+    <hr>
+    #### 经验描述
+    
+    <hr>
+    
+    
+    <hr>
+    1. 你认为你项目中的难点 & 是如何解决的
+    
+    <hr>
+    2. 你是如何定义项目规范的
+    
+    <hr>
+    3. 你在使用 git 的时候遇到的问题
+    
+    <hr>
+    
+</body>
+</html>
